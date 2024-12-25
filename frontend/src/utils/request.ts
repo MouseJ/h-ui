@@ -1,18 +1,12 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { useAccountStoreHook } from "@/store/modules/account";
-import i18n from "@/lang/index"; // Подключаем глобальный экземпляр i18n
 
-// Получаем функцию перевода
-const { t } = i18n.global;
-
-// Создаём axios экземпляр
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API,
   timeout: 50000,
   headers: { "Content-Type": "application/json;charset=utf-8" },
 });
 
-// Перехватчик запросов
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const accountStore = useAccountStoreHook();
@@ -26,30 +20,27 @@ service.interceptors.request.use(
   }
 );
 
-// Перехватчик ответов
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const { code, message } = response.data;
     if (code === 20000) {
       return response.data;
     }
-    // Обработка бинарных данных
     if (response.data instanceof ArrayBuffer || response.data instanceof Blob) {
       return response;
     }
-    // Локализованное сообщение об ошибке
-    ElMessage.error(message || t("system.error"));
-    return Promise.reject(new Error(message || t("system.error")));
+    ElMessage.error(message || "System Error");
+    return Promise.reject(new Error(message || "Error"));
   },
   (error: any) => {
     if (error.response?.data) {
       const { code, msg } = error.response.data;
       if (code === "A0230") {
         ElMessageBox.confirm(
-          t("auth.sessionExpired"),
-          t("auth.tip"),
+          "Current session expired. Please log in again.",
+          "Notice",
           {
-            confirmButtonText: t("auth.confirm"),
+            confirmButtonText: "OK",
             type: "warning",
           }
         ).then(() => {
@@ -57,10 +48,10 @@ service.interceptors.response.use(
           window.location.href = "/";
         });
       } else {
-        ElMessage.error(msg || t("system.error"));
+        ElMessage.error(msg || "System Error");
       }
     } else {
-      ElMessage.error(t("system.networkError"));
+      ElMessage.error("Network Error");
     }
     return Promise.reject(error.message);
   }
