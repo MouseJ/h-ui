@@ -23,23 +23,37 @@ init_var() {
   ssh_local_forwarded_port=8082
 }
 
-# Вывод сообщений с цветами
+# Вывод с цветом
 echo_content() {
-  local colors=(
-    ["red"]="\033[31m"
-    ["green"]="\033[32m"
-    ["yellow"]="\033[33m"
-    ["blue"]="\033[34m"
-    ["purple"]="\033[35m"
-    ["skyBlue"]="\033[36m"
-    ["white"]="\033[37m"
-  )
-  ${ECHO_TYPE} "${colors[$1]}$2\033[0m"
+  case $1 in
+  "red")
+    ${ECHO_TYPE} "\033[31m$2\033[0m"
+    ;;
+  "green")
+    ${ECHO_TYPE} "\033[32m$2\033[0m"
+    ;;
+  "yellow")
+    ${ECHO_TYPE} "\033[33m$2\033[0m"
+    ;;
+  "blue")
+    ${ECHO_TYPE} "\033[34m$2\033[0m"
+    ;;
+  "skyBlue")
+    ${ECHO_TYPE} "\033[36m$2\033[0m"
+    ;;
+  *)
+    ${ECHO_TYPE} "$2"
+    ;;
+  esac
 }
 
-# Проверка доступности сети
+# Проверка сетевого подключения
 can_connect() {
-  ping -c2 -i0.3 -W1 "$1" &>/dev/null
+  if ping -c2 -i0.3 -W1 "$1" &>/dev/null; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 # Сравнение версий
@@ -62,20 +76,22 @@ version_ge() {
 
 # Проверка системы
 check_sys() {
-  [[ $(id -u) != "0" ]] && { echo_content red "Скрипт должен запускаться с правами root."; exit 1; }
+  if [[ $(id -u) != "0" ]]; then
+    echo_content red "Скрипт должен запускаться с правами root"
+    exit 1
+  fi
 
-  can_connect "www.google.com" || { echo_content red "Нет сетевого подключения."; exit 1; }
+  can_connect "www.google.com" || { echo_content red "Нет сетевого подключения"; exit 1; }
 
   if command -v yum &>/dev/null; then
     package_manager='yum'
-  elif command -v dnf &>/dev/null; then
-    package_manager='dnf'
   elif command -v apt-get &>/dev/null; then
     package_manager='apt-get'
   elif command -v apt &>/dev/null; then
     package_manager='apt'
   else
-    echo_content red "Дистрибутив не поддерживается."; exit 1
+    echo_content red "Дистрибутив не поддерживается"
+    exit 1
   fi
 
   if grep -qi "centos" /etc/os-release; then
@@ -88,22 +104,34 @@ check_sys() {
     release="ubuntu"
     version=$(lsb_release -sr)
   else
-    echo_content red "Поддерживаются только CentOS, Debian и Ubuntu."; exit 1
+    echo_content red "Поддерживаются только CentOS, Debian и Ubuntu"
+    exit 1
   fi
 
   major_version=$(echo "${version}" | cut -d. -f1)
-  [[ $release == "centos" && $major_version -lt 6 ]] && { echo_content red "CentOS версии $version не поддерживается. Требуется CentOS 6+."; exit 1; }
-  [[ $release == "ubuntu" && $major_version -lt 16 ]] && { echo_content red "Ubuntu версии $version не поддерживается. Требуется Ubuntu 16+."; exit 1; }
-  [[ $release == "debian" && $major_version -lt 8 ]] && { echo_content red "Debian версии $version не поддерживается. Требуется Debian 8+."; exit 1; }
+  [[ $release == "centos" && $major_version -lt 6 ]] && { echo_content red "CentOS версии $version не поддерживается"; exit 1; }
+  [[ $release == "ubuntu" && $major_version -lt 16 ]] && { echo_content red "Ubuntu версии $version не поддерживается"; exit 1; }
+  [[ $release == "debian" && $major_version -lt 8 ]] && { echo_content red "Debian версии $version не поддерживается"; exit 1; }
 
   get_arch=$(arch | grep -E "x86_64|amd64|aarch64|arm64")
-  [[ -z "${get_arch}" ]] && { echo_content red "Поддерживаются только архитектуры x86_64, amd64, arm64 и aarch64."; exit 1; }
+  [[ -z "${get_arch}" ]] && { echo_content red "Поддерживаются только архитектуры x86_64, amd64, arm64 и aarch64"; exit 1; }
 }
 
 # Установка зависимостей
 install_depend() {
   [[ $package_manager =~ apt ]] && ${package_manager} update -y
   ${package_manager} install -y curl systemd nftables
+}
+
+# Установка Docker
+install_docker() {
+  if [[ ! $(command -v docker) ]]; then
+    echo_content green "---> Установка Docker"
+    curl -fsSL https://get.docker.com | bash
+    systemctl enable docker && systemctl start docker
+  else
+    echo_content skyBlue "---> Docker уже установлен"
+  fi
 }
 
 # Настройка Docker
@@ -120,14 +148,13 @@ EOF
   systemctl daemon-reload
 }
 
-# Установка H UI с помощью systemd
+# Установка H UI через systemd
 install_h_ui_systemd() {
   echo_content green "---> Установка H UI через systemd"
   mkdir -p ${HUI_DATA_SYSTEMD}
-  export HUI_DATA="${HUI_DATA_SYSTEMD}"
 
-  bin_url=https://github.com/MouseJ/h-ui/releases/latest/download/h-ui-linux-${get_arch}
-  [[ "$hui_systemd_version" != "latest" ]] && bin_url=https://github.com/MouseJ/h-ui/releases/download/${hui_systemd_version}/h-ui-linux-${get_arch}
+  bin_url="https://github.com/MouseJ/h-ui/releases/latest/download/h-ui-linux-${get_arch}"
+  [[ "$hui_systemd_version" != "latest" ]] && bin_url="https://github.com/MouseJ/h-ui/releases/download/${hui_systemd_version}/h-ui-linux-${get_arch}"
 
   curl -fsSL "${bin_url}" -o /usr/local/h-ui/h-ui
   chmod +x /usr/local/h-ui/h-ui
@@ -145,21 +172,39 @@ install_h_ui_systemd() {
   echo_content yellow "H UI доступен на порту: ${h_ui_port}"
 }
 
-# Основная функция
+# Установка H UI через Docker
+install_h_ui_docker() {
+  echo_content green "---> Установка H UI через Docker"
+  mkdir -p ${HUI_DATA_DOCKER}
+
+  read -r -p "Введите порт для H UI (по умолчанию: 8081): " h_ui_port
+  h_ui_port=${h_ui_port:-8081}
+
+  docker run -d --name h-ui --restart always \
+    --network=host -e TZ=Asia/Shanghai \
+    -v /h-ui:/h-ui \
+    "mousej/h-ui${hui_docker_version}" \
+    ./h-ui -p ${h_ui_port}
+
+  echo_content yellow "H UI доступен на порту: ${h_ui_port}"
+}
+
+# Главное меню
 main() {
   init_var
   check_sys
   install_depend
 
-  echo_content yellow "1. Установить H UI (systemd)"
+  echo_content yellow "1. Установить H UI через systemd"
+  echo_content yellow "2. Установить H UI через Docker"
+  echo_content yellow "3. Установить Docker"
+
   read -r -p "Выберите опцию: " option
   case $option in
-    1)
-      install_h_ui_systemd
-      ;;
-    *)
-      echo_content red "Неверная опция."
-      ;;
+    1) install_h_ui_systemd ;;
+    2) install_docker && install_h_ui_docker ;;
+    3) install_docker ;;
+    *) echo_content red "Неверный выбор" ;;
   esac
 }
 
