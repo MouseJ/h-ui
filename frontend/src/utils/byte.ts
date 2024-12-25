@@ -4,43 +4,44 @@ const { t } = useI18n();
 
 /**
  * Форматирование размера в байтах
- * @param bytes Количество байтов
- * @param decimals Количество десятичных знаков, по умолчанию 2
- * @returns Строка с отформатированным размером
  */
 export const formatBytes = (bytes: number, decimals = 2): string => {
+  const units = t("storage.units") as unknown as string[];
+  if (!Array.isArray(units)) {
+    throw new Error("Локализация storage.units должна быть массивом");
+  }
+
   if (bytes === -1) {
-    return t("storage.unlimited"); // Используем локализованное "Неограниченно"
+    return t("storage.unlimited");
   }
   if (bytes === 0) {
-    return `0 ${t("storage.units")[0]}`; // "0 байт"
+    return `0 ${units[0]}`;
   }
 
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = t("storage.units") as string[]; // Указываем, что это массив
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + units[i];
 };
 
 /**
- * Рассчитать количество байтов из значения и единицы измерения
- * @param value Значение
- * @param unit Единица измерения
- * @returns Количество байтов
+ * Расчёт байтов из значения и единицы измерения
  */
-export const calculateBytes = (value = 0, unit = "байт"): number => {
-  const formattedUnit = unit.toUpperCase().trim();
-  const sizes = t("storage.units") as string[];
+export const calculateBytes = (value = 0, unit = "Байт"): number => {
+  const units = t("storage.units") as unknown as string[];
+  if (!Array.isArray(units)) {
+    throw new Error("Локализация storage.units должна быть массивом");
+  }
 
-  const unitToBytes = sizes.reduce((acc: Record<string, number>, curr: string, idx: number) => {
+  const formattedUnit = unit.toUpperCase().trim();
+  const unitToBytes = units.reduce((acc: Record<string, number>, curr: string, idx: number) => {
     acc[curr.toUpperCase()] = 1024 ** idx;
     return acc;
   }, {});
 
   if (!unitToBytes[formattedUnit]) {
-    throw new Error(t("storage.error")); // Локализованное сообщение об ошибке
+    throw new Error(t("storage.error"));
   }
 
   if (value === -1) {
@@ -51,36 +52,20 @@ export const calculateBytes = (value = 0, unit = "байт"): number => {
 };
 
 /**
- * Форматирование значения хранения
- * @param bytes Количество байтов
- * @param decimals Количество десятичных знаков, по умолчанию 2
- * @returns Число, отформатированное для хранения
- */
-export const formatStorageCapacity = (bytes: number, decimals = 2): number => {
-  if (!bytes || bytes <= 0) {
-    return bytes;
-  }
-
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
-};
-
-/**
- * Определить единицу измерения для хранения
- * @param bytes Количество байтов
- * @returns Строка с единицей измерения
+ * Определение единицы измерения для хранения
  */
 export const formatStorageUnit = (bytes: number): string => {
+  const units = t("storage.units") as unknown as string[];
+  if (!Array.isArray(units)) {
+    throw new Error("Локализация storage.units должна быть массивом");
+  }
+
   if (!bytes || bytes <= 0) {
-    return t("storage.units")[0]; // "байт"
+    return units[0];
   }
 
   const k = 1024;
-  const sizes = t("storage.units") as string[];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return sizes[i];
+  return units[i];
 };
