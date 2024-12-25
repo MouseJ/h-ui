@@ -5,41 +5,50 @@ import { usePermissionStoreHook } from "@/store/modules/permission";
 import NProgress from "nprogress";
 import "nprogress/nprogress.css";
 
-NProgress.configure({ showSpinner: false }); // 进度条
+NProgress.configure({ showSpinner: false }); // Конфигурация индикатора загрузки
 
 const permissionStore = usePermissionStoreHook();
 
-// 白名单路由
+// Список маршрутов, доступных без авторизации
 const whiteList = ["/login", "/register"];
 
 router.beforeEach(async (to, from, next) => {
-  NProgress.start();
-  const hasToken = localStorage.getItem("accessToken");
+  NProgress.start(); // Начало индикатора загрузки
+  const hasToken = localStorage.getItem("accessToken"); // Проверяем наличие токена
+
   if (hasToken) {
     if (to.path === "/login") {
-      // 如果已登录，跳转首页
+      // Если пользователь уже авторизован, перенаправляем на главную страницу
       next({ path: "/" });
       NProgress.done();
     } else {
       const AccountStore = useAccountStoreHook();
       const hasRoles = AccountStore.roles && AccountStore.roles.length > 0;
+
       if (hasRoles) {
-        // 未匹配到任何路由，跳转404
+        // Если маршрут не найден, перенаправляем на 404
         if (to.matched.length === 0) {
           from.name ? next({ name: from.name }) : next("/404");
         } else {
-          next();
+          next(); // Продолжаем маршрут
         }
       } else {
         try {
+          // Загружаем информацию о пользователе
           const { roles } = await AccountStore.getAccountInfo();
           const accessRoutes = permissionStore.generateRoutes(roles);
+
+          // Динамически добавляем маршруты
           accessRoutes.forEach((route) => {
             router.addRoute(route);
           });
+
+          // Перезагружаем текущий маршрут
           next({ ...to, replace: true });
         } catch (error) {
-          // 移除 token 并跳转登录页
+          console.error("Ошибка получения данных пользователя:", error);
+
+          // Удаляем токен и перенаправляем на страницу входа
           await AccountStore.resetToken();
           next(`/login?redirect=${to.path}`);
           NProgress.done();
@@ -47,10 +56,11 @@ router.beforeEach(async (to, from, next) => {
       }
     }
   } else {
-    // 未登录可以访问白名单页面
-    if (whiteList.indexOf(to.path) !== -1) {
+    // Если пользователь не авторизован, разрешаем доступ только к маршрутам из белого списка
+    if (whiteList.includes(to.path)) {
       next();
     } else {
+      // Перенаправляем на страницу входа
       next(`/login?redirect=${to.path}`);
       NProgress.done();
     }
@@ -58,5 +68,5 @@ router.beforeEach(async (to, from, next) => {
 });
 
 router.afterEach(() => {
-  NProgress.done();
+  NProgress.done(); // Завершаем индикатор загрузки
 });
