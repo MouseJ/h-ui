@@ -168,8 +168,6 @@ export default {
     refresh: "Обновить",
     close: "Закрыть",
     closeOther: "Закрыть другие",
-    closeLeft: "Закрыть слева",
-    closeRight: "Закрыть справа",
     closeAll: "Закрыть все",
   },
   language: {
