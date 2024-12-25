@@ -1,6 +1,6 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { useAccountStoreHook } from "@/store/modules/account";
-import { useI18n } from "vue-i18n";
+import i18n from "@/lang/index"; // Глобальный экземпляр i18n
 
 // Создаём axios экземпляр
 const service = axios.create({
@@ -9,8 +9,8 @@ const service = axios.create({
   headers: { "Content-Type": "application/json;charset=utf-8" },
 });
 
-// Подключаем локализацию
-const { t } = useI18n();
+// Получаем функцию перевода из i18n
+const { t } = i18n.global;
 
 // Перехватчик запросов
 service.interceptors.request.use(
