@@ -8,7 +8,7 @@ import SvgIcon from "@/components/SvgIcon/index.vue";
 
 const props = defineProps({
   /**
-   * 路由(eg:level_3_1)
+   * Текущий маршрут (например: level_3_1)
    */
   item: {
     type: Object,
@@ -16,7 +16,7 @@ const props = defineProps({
   },
 
   /**
-   * 父层级完整路由路径(eg:/level/level_3/level_3_1)
+   * Полный путь родительского маршрута (например: /level/level_3/level_3_1)
    */
   basePath: {
     type: String,
@@ -24,34 +24,34 @@ const props = defineProps({
   },
 });
 
-const onlyOneChild = ref(); // 临时变量，唯一子路由
+const onlyOneChild = ref(); // Временная переменная, единственный дочерний маршрут
 
 /**
- * 判断当前路由是否只有一个子路由
+ * Проверяет, имеет ли маршрут только один дочерний элемент
  *
- * 1：如果只有一个子路由： 返回 true
- * 2：如果无子路由 ：返回 true
+ * 1: Если только один дочерний маршрут, возвращает true
+ * 2: Если нет дочерних маршрутов, также возвращает true
  *
- * @param children 子路由数组
- * @param parent 当前路由
+ * @param children Массив дочерних маршрутов
+ * @param parent Текущий маршрут
  */
 function hasOneShowingChild(children = [], parent: any) {
-  // 需要显示的子路由数组
+  // Фильтрация дочерних маршрутов, которые должны отображаться
   const showingChildren = children.filter((item: any) => {
     if (item.meta?.hidden) {
-      return false; // 过滤不显示的子路由
+      return false; // Исключает скрытые маршруты
     } else {
-      onlyOneChild.value = item; // 唯一子路由赋值（多个子路由情况 onlyOneChild 变量是用不上的）
+      onlyOneChild.value = item; // Сохраняет единственный дочерний маршрут (если их несколько, значение не используется)
       return true;
     }
   });
 
-  // 1：如果只有一个子路由, 返回 true
+  // 1: Если только один дочерний маршрут, возвращает true
   if (showingChildren.length === 1) {
     return true;
   }
 
-  // 2：如果无子路由, 复制当前路由信息作为其子路由，满足只拥有一个子路由的条件，所以返回 true
+  // 2: Если дочерних маршрутов нет, создает виртуальный маршрут и возвращает true
   if (showingChildren.length === 0) {
     onlyOneChild.value = { ...parent, path: "", noShowingChildren: true };
     return true;
@@ -60,25 +60,26 @@ function hasOneShowingChild(children = [], parent: any) {
 }
 
 /**
- * 解析路径
+ * Разрешает путь маршрута
  *
- * @param routePath 路由路径
+ * @param routePath Путь маршрута
  */
 function resolvePath(routePath: string) {
   if (isExternal(routePath)) {
-    return routePath;
+    return routePath; // Если это внешний путь, возвращаем его
   }
   if (isExternal(props.basePath)) {
-    return props.basePath;
+    return props.basePath; // Если базовый путь внешний, возвращаем его
   }
-  // 完整路径 = 父级路径(/level/level_3) + 路由路径
-  const fullPath = path.resolve(props.basePath, routePath); // 相对路径 → 绝对路径
+  // Полный путь = родительский путь (/level/level_3) + путь маршрута
+  const fullPath = path.resolve(props.basePath, routePath); // Относительный путь → абсолютный путь
   return fullPath;
 }
 </script>
+
 <template>
   <div v-if="!item.meta || !item.meta.hidden">
-    <!-- 只包含一个子路由节点的路由，显示其【唯一子路由】 -->
+    <!-- Если маршрут содержит только один дочерний элемент, отображаем его -->
     <template
       v-if="
         hasOneShowingChild(item.children, item) &&
@@ -98,7 +99,7 @@ function resolvePath(routePath: string) {
       </app-link>
     </template>
 
-    <!-- 包含多个子路由  -->
+    <!-- Если маршрут содержит несколько дочерних элементов -->
     <el-sub-menu v-else :index="resolvePath(item.path)" teleported>
       <template #title>
         <svg-icon
