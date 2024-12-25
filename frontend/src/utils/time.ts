@@ -1,7 +1,9 @@
+import i18n from "@/lang/index"; // Импорт локализации
+
 /**
- * 将时间戳转换为格式化日期时间字符串（YYYY-MM-DD HH:mm:ss）
- * @param timestamp 时间戳
- * @returns 格式化日期时间字符串
+ * Преобразует временную метку (timestamp) в отформатированную строку даты и времени (YYYY-MM-DD HH:mm:ss)
+ * @param timestamp Временная метка
+ * @returns Строка с отформатированной датой и временем
  */
 export const timestampToDateTime = (timestamp: number): string => {
   const date = new Date(timestamp);
@@ -15,12 +17,17 @@ export const timestampToDateTime = (timestamp: number): string => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
+/**
+ * Рассчитывает разницу во времени между текущим моментом и временной меткой
+ * @param timestamp Временная метка
+ * @returns Строка, описывающая оставшееся время
+ */
 export const calculateTimeDifference = (timestamp: number): string => {
   const now = Date.now();
   const diff = timestamp - now;
 
   if (diff <= 0) {
-    return "-";
+    return i18n.global.t("time.now"); // Используем локализованный текст
   }
 
   const seconds = Math.floor(diff / 1000);
@@ -35,24 +42,24 @@ export const calculateTimeDifference = (timestamp: number): string => {
   const parts: string[] = [];
 
   if (days > 0) {
-    parts.push(`${days}天`);
+    parts.push(`${days} ${i18n.global.t("time.days")}`);
   }
   if (remainingHours > 0) {
-    parts.push(`${remainingHours}小时`);
+    parts.push(`${remainingHours} ${i18n.global.t("time.hours")}`);
   }
   if (remainingMinutes > 0) {
-    parts.push(`${remainingMinutes}分钟`);
+    parts.push(`${remainingMinutes} ${i18n.global.t("time.minutes")}`);
   }
   if (remainingSeconds > 0) {
-    parts.push(`${remainingSeconds}秒`);
+    parts.push(`${remainingSeconds} ${i18n.global.t("time.seconds")}`);
   }
 
   return parts.join(" ");
 };
 
 /**
- * 获取一小时后的时间戳
- * @returns 一周后的时间戳
+ * Получает временную метку на час вперёд
+ * @returns Временная метка на час вперёд
  */
 export const getHourLater = (): number => {
   const date = new Date();
@@ -61,8 +68,8 @@ export const getHourLater = (): number => {
 };
 
 /**
- * 获取一天后的时间戳
- * @returns 一周后的时间戳
+ * Получает временную метку на день вперёд
+ * @returns Временная метка на день вперёд
  */
 export const getDayLater = (): number => {
   const date = new Date();
@@ -71,8 +78,8 @@ export const getDayLater = (): number => {
 };
 
 /**
- * 获取一周后的时间戳
- * @returns 一周后的时间戳
+ * Получает временную метку на неделю вперёд
+ * @returns Временная метка на неделю вперёд
  */
 export const getWeekLater = (): number => {
   const date = new Date();
@@ -81,8 +88,8 @@ export const getWeekLater = (): number => {
 };
 
 /**
- * 获取一个月后的时间戳
- * @returns 一个月后的时间戳
+ * Получает временную метку на месяц вперёд
+ * @returns Временная метка на месяц вперёд
  */
 export const getMonthLater = (): number => {
   const date = new Date();
@@ -91,8 +98,8 @@ export const getMonthLater = (): number => {
 };
 
 /**
- * 获取一年后的时间戳
- * @returns 一年后的时间戳
+ * Получает временную метку на год вперёд
+ * @returns Временная метка на год вперёд
  */
 export const getYearLater = (): number => {
   const date = new Date();
