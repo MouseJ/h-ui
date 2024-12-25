@@ -8,13 +8,9 @@ import {
   ComponentInternalInstance,
 } from "vue";
 import { storeToRefs } from "pinia";
-
 import path from "path-browserify";
-
 import { useRoute, useRouter } from "vue-router";
-
 import { translateRouteTitleI18n } from "@/utils/i18n";
-
 import { usePermissionStore } from "@/store/modules/permission";
 import { useTagsViewStore, TagView } from "@/store/modules/tagsView";
 import ScrollPane from "./ScrollPane.vue";
@@ -41,12 +37,11 @@ watch(
     moveToCurrentTag();
   },
   {
-    //初始化立即执行
-    immediate: true,
+    immediate: true, // Выполнять при инициализации
   }
 );
 
-const tagMenuVisible = ref(false); // 标签操作菜单显示状态
+const tagMenuVisible = ref(false); // Состояние видимости меню действий с тегами
 watch(tagMenuVisible, (value) => {
   if (value) {
     document.body.addEventListener("click", closeTagMenu);
@@ -83,7 +78,6 @@ function initTags() {
   const tags: TagView[] = filterAffixTags(permissionStore.routes);
   affixTags.value = tags;
   for (const tag of tags) {
-    // Must have tag name
     if (tag.name) {
       tagsViewStore.addVisitedView(tag);
     }
@@ -101,7 +95,6 @@ function moveToCurrentTag() {
     for (const r of tagsViewStore.visitedViews) {
       if (r.path === route.path) {
         scrollPaneRef.value.moveToTarget(r);
-        // when query is different then update
         if (r.fullPath !== route.fullPath) {
           tagsViewStore.updateVisitedView(route);
         }
@@ -151,45 +144,10 @@ function refreshSelectedTag(view: TagView) {
   });
 }
 
-function toLastView(visitedViews: TagView[], view?: any) {
-  const latestView = visitedViews.slice(-1)[0];
-  if (latestView && latestView.fullPath) {
-    router.push(latestView.fullPath);
-  } else {
-    // now the default is to redirect to the home page if there is no tags-view,
-    // you can adjust it according to your needs.
-    if (view.name === "Dashboard") {
-      // to reload home page
-      router.replace({ path: "/redirect" + view.fullPath });
-    } else {
-      router.push("/");
-    }
-  }
-}
-
 function closeSelectedTag(view: TagView) {
   tagsViewStore.delView(view).then((res: any) => {
     if (isActive(view)) {
       toLastView(res.visitedViews, view);
-    }
-  });
-}
-
-function closeLeftTags() {
-  tagsViewStore.delLeftViews(selectedTag.value).then((res: any) => {
-    if (
-      !res.visitedViews.find((item: any) => item.fullPath === route.fullPath)
-    ) {
-      toLastView(res.visitedViews);
-    }
-  });
-}
-function closeRightTags() {
-  tagsViewStore.delRightViews(selectedTag.value).then((res: any) => {
-    if (
-      !res.visitedViews.find((item: any) => item.fullPath === route.fullPath)
-    ) {
-      toLastView(res.visitedViews);
     }
   });
 }
@@ -210,12 +168,10 @@ function closeAllTags(view: TagView) {
 function openTagMenu(tag: TagView, e: MouseEvent) {
   const menuMinWidth = 105;
 
-  // console.log("test", proxy?.$el);
-
-  const offsetLeft = proxy?.$el.getBoundingClientRect().left; // container margin left
-  const offsetWidth = proxy?.$el.offsetWidth; // container width
-  const maxLeft = offsetWidth - menuMinWidth; // left boundary
-  const l = e.clientX - offsetLeft + 15; // 15: margin right
+  const offsetLeft = proxy?.$el.getBoundingClientRect().left;
+  const offsetWidth = proxy?.$el.offsetWidth;
+  const maxLeft = offsetWidth - menuMinWidth;
+  const l = e.clientX - offsetLeft + 15;
 
   if (l > maxLeft) {
     left.value = maxLeft;
@@ -232,10 +188,6 @@ function closeTagMenu() {
   tagMenuVisible.value = false;
 }
 
-function handleScroll() {
-  closeTagMenu();
-}
-
 onMounted(() => {
   initTags();
 });
@@ -243,7 +195,7 @@ onMounted(() => {
 
 <template>
   <div class="tags-container">
-    <scroll-pane ref="scrollPaneRef" @scroll="handleScroll">
+    <scroll-pane ref="scrollPaneRef" @scroll="closeTagMenu">
       <router-link
         :class="'tags-item ' + (isActive(tag) ? 'active' : '')"
         v-for="tag in visitedViews"
@@ -264,7 +216,7 @@ onMounted(() => {
       </router-link>
     </scroll-pane>
 
-    <!-- tag标签操作菜单 -->
+    <!-- Меню действий с тегами -->
     <ul
       v-show="tagMenuVisible"
       class="tag-menu"
@@ -272,27 +224,27 @@ onMounted(() => {
     >
       <li @click="refreshSelectedTag(selectedTag)">
         <svg-icon icon-class="refresh" />
-        刷新
+        {{ $t("tagsView.refresh") }}
       </li>
       <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">
         <svg-icon icon-class="close" />
-        关闭
+        {{ $t("tagsView.close") }}
       </li>
       <li @click="closeOtherTags">
         <svg-icon icon-class="close_other" />
-        关闭其它
+        {{ $t("tagsView.closeOther") }}
       </li>
       <li v-if="!isFirstView()" @click="closeLeftTags">
         <svg-icon icon-class="close_left" />
-        关闭左侧
+        {{ $t("tagsView.closeLeft") }}
       </li>
       <li v-if="!isLastView()" @click="closeRightTags">
         <svg-icon icon-class="close_right" />
-        关闭右侧
+        {{ $t("tagsView.closeRight") }}
       </li>
       <li @click="closeAllTags(selectedTag)">
         <svg-icon icon-class="close_all" />
-        关闭所有
+        {{ $t("tagsView.closeAll") }}
       </li>
     </ul>
   </div>
@@ -330,43 +282,32 @@ onMounted(() => {
       color: #fff;
       background-color: var(--el-color-primary);
       border-color: var(--el-color-primary);
-
-      &::before {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        margin-right: 5px;
-        content: "";
-        background: #fff;
-        border-radius: 50%;
-      }
     }
 
     &-close {
       border-radius: 100%;
-
       &:hover {
         color: #fff;
         background: rgb(0 0 0 / 16%);
       }
     }
   }
-}
 
-.tag-menu {
-  position: absolute;
-  z-index: 99;
-  font-size: 12px;
-  background: var(--el-bg-color-overlay);
-  border-radius: 4px;
-  box-shadow: var(--el-box-shadow-light);
+  .tag-menu {
+    position: absolute;
+    z-index: 99;
+    font-size: 12px;
+    background: var(--el-bg-color-overlay);
+    border-radius: 4px;
+    box-shadow: var(--el-box-shadow-light);
 
-  li {
-    padding: 8px 16px;
-    cursor: pointer;
+    li {
+      padding: 8px 16px;
+      cursor: pointer;
 
-    &:hover {
-      background: var(--el-fill-color-light);
+      &:hover {
+        background: var(--el-fill-color-light);
+      }
     }
   }
 }
