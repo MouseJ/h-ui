@@ -1,23 +1,19 @@
 import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { useAccountStoreHook } from "@/store/modules/account";
-import i18n from "@/lang/index"; // Глобальный экземпляр i18n
 
-// Создаём axios экземпляр
+// 创建 axios 实例
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API,
   timeout: 50000,
   headers: { "Content-Type": "application/json;charset=utf-8" },
 });
 
-// Получаем функцию перевода из i18n
-const { t } = i18n.global;
-
-// Перехватчик запросов
+// 请求拦截器
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const accountStore = useAccountStoreHook();
     if (accountStore.token) {
-      config.headers.Authorization = accountStore.token; // Добавляем токен в заголовки
+      config.headers.Authorization = accountStore.token;
     }
     return config;
   },
@@ -26,50 +22,40 @@ service.interceptors.request.use(
   }
 );
 
-// Перехватчик ответов
+// 响应拦截器
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const { code, message } = response.data;
-
     if (code === 20000) {
       return response.data;
     }
-
-    // Обработка бинарных данных (например, для экспорта файлов)
+    // 响应数据为二进制流处理(文件导出)
     if (response.data instanceof ArrayBuffer || response.data instanceof Blob) {
       return response;
     }
 
-    // Локализованное сообщение об ошибке
-    ElMessage.error(message || t("system.error"));
-    return Promise.reject(new Error(message || t("system.error")));
+    ElMessage.error(message || "系统出错");
+    return Promise.reject(new Error(message || "Error"));
   },
   (error: any) => {
-    if (error.response?.data) {
+    if (error.response.data) {
       const { code, msg } = error.response.data;
-
-      // Если токен истёк, просим пользователя снова войти
+      // token 过期,重新登录
       if (code === "A0230") {
-        ElMessageBox.confirm(
-          t("auth.sessionExpired"),
-          t("auth.tip"),
-          {
-            confirmButtonText: t("auth.confirm"),
-            type: "warning",
-          }
-        ).then(() => {
+        ElMessageBox.confirm("当前页面已失效，请重新登录", "提示", {
+          confirmButtonText: "确定",
+          type: "warning",
+        }).then(() => {
           localStorage.clear();
           window.location.href = "/";
         });
       } else {
-        ElMessage.error(msg || t("system.error"));
+        ElMessage.error(msg || "系统出错");
       }
-    } else {
-      ElMessage.error(t("system.networkError"));
     }
     return Promise.reject(error.message);
   }
 );
 
-// Экспорт axios экземпляра
+// 导出 axios 实例
 export default service;
