@@ -4,23 +4,26 @@ import router from "@/router";
 import { setupStore } from "@/store";
 import { setupDirective } from "@/directive";
 
-import "@/permission";
+import "@/permission"; // Файл управления доступом и разрешениями
 
-// 本地SVG图标
+// Локальные SVG-иконки
 import "virtual:svg-icons-register";
 
-// 国际化
+// Интернационализация (i18n)
 import i18n from "@/lang/index";
 
-// 样式
-import "element-plus/theme-chalk/dark/css-vars.css";
-import "@/styles/index.scss";
-import "uno.css";
+// Стили
+import "element-plus/theme-chalk/dark/css-vars.css"; // Тёмная тема для Element Plus
+import "@/styles/index.scss"; // Пользовательские стили
+import "uno.css"; // Стили на основе UnoCSS
 
 const app = createApp(App);
-// 全局注册 自定义指令(directive)
+
+// Регистрация пользовательских директив
 setupDirective(app);
-// 全局注册 状态管理(store)
+
+// Регистрация управления состоянием (Vuex/Pinia)
 setupStore(app);
 
+// Подключение маршрутов и локализации, затем монтирование приложения
 app.use(router).use(i18n).mount("#app");
