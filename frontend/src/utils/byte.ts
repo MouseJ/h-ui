@@ -18,7 +18,7 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
 
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
-  const sizes = t("storage.units"); // Получаем массив единиц измерения из локализации
+  const sizes = t("storage.units") as string[]; // Указываем, что это массив
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
@@ -32,10 +32,10 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
  */
 export const calculateBytes = (value = 0, unit = "байт"): number => {
   const formattedUnit = unit.toUpperCase().trim();
-  const sizes = t("storage.units").map((u: string) => u.toUpperCase());
+  const sizes = t("storage.units") as string[];
 
   const unitToBytes = sizes.reduce((acc: Record<string, number>, curr: string, idx: number) => {
-    acc[curr] = 1024 ** idx;
+    acc[curr.toUpperCase()] = 1024 ** idx;
     return acc;
   }, {});
 
@@ -79,7 +79,7 @@ export const formatStorageUnit = (bytes: number): string => {
   }
 
   const k = 1024;
-  const sizes = t("storage.units");
+  const sizes = t("storage.units") as string[];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return sizes[i];
