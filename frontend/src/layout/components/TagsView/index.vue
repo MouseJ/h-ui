@@ -1,211 +1,138 @@
 <script setup lang="ts">
 import {
-  getCurrentInstance,
-  nextTick,
   ref,
-  watch,
+  reactive,
   onMounted,
+  watch,
+  nextTick,
+  getCurrentInstance,
   ComponentInternalInstance,
 } from "vue";
-import { storeToRefs } from "pinia";
-import path from "path-browserify";
 import { useRoute, useRouter } from "vue-router";
-import { translateRouteTitleI18n } from "@/utils/i18n";
-import { usePermissionStore } from "@/store/modules/permission";
+import { storeToRefs } from "pinia";
 import { useTagsViewStore, TagView } from "@/store/modules/tagsView";
+import { usePermissionStore } from "@/store/modules/permission";
+import { translateRouteTitleI18n } from "@/utils/i18n";
 import ScrollPane from "./ScrollPane.vue";
 
 const { proxy } = getCurrentInstance() as ComponentInternalInstance;
+
 const router = useRouter();
 const route = useRoute();
-
-const permissionStore = usePermissionStore();
 const tagsViewStore = useTagsViewStore();
+const permissionStore = usePermissionStore();
 
 const { visitedViews } = storeToRefs(tagsViewStore);
-
-const selectedTag = ref({});
 const scrollPaneRef = ref();
-const left = ref(0);
-const top = ref(0);
+const tagMenuVisible = ref(false);
+const selectedTag = ref<TagView | null>(null);
 const affixTags = ref<TagView[]>([]);
+const menuPosition = reactive({ left: 0, top: 0 });
 
-watch(
-  route,
-  () => {
-    addTags();
-    moveToCurrentTag();
-  },
-  {
-    immediate: true,
-  }
-);
-
-const tagMenuVisible = ref(false); // Состояние видимости меню действий с тегами
-watch(tagMenuVisible, (value) => {
-  if (value) {
-    document.body.addEventListener("click", closeTagMenu);
-  } else {
-    document.body.removeEventListener("click", closeTagMenu);
-  }
-});
-
+/**
+ * Фильтруем закрепленные теги
+ */
 function filterAffixTags(routes: any[], basePath = "/") {
   let tags: TagView[] = [];
-
   routes.forEach((route) => {
-    if (route.meta && route.meta.affix) {
-      const tagPath = path.resolve(basePath, route.path);
-      tags.push({
-        fullPath: tagPath,
-        path: tagPath,
-        name: route.name,
-        meta: { ...route.meta },
-      });
+    if (route.meta?.affix) {
+      const tagPath = `${basePath}${route.path}`;
+      tags.push({ ...route, fullPath: tagPath });
     }
-
     if (route.children) {
-      const childTags = filterAffixTags(route.children, route.path);
-      if (childTags.length >= 1) {
-        tags = tags.concat(childTags);
-      }
+      tags = tags.concat(filterAffixTags(route.children, route.path));
     }
   });
   return tags;
 }
 
+/**
+ * Инициализируем закрепленные теги
+ */
 function initTags() {
-  const tags: TagView[] = filterAffixTags(permissionStore.routes);
-  affixTags.value = tags;
-  for (const tag of tags) {
-    if (tag.name) {
-      tagsViewStore.addVisitedView(tag);
-    }
-  }
+  affixTags.value = filterAffixTags(permissionStore.routes);
+  affixTags.value.forEach((tag) => tagsViewStore.addVisitedView(tag));
 }
 
-function addTags() {
+/**
+ * Добавляем текущий маршрут в теги
+ */
+function addCurrentTag() {
   if (route.name) {
     tagsViewStore.addView(route);
   }
 }
 
+/**
+ * Прокручиваем до текущего тега
+ */
 function moveToCurrentTag() {
   nextTick(() => {
-    for (const r of tagsViewStore.visitedViews) {
-      if (r.path === route.path) {
-        scrollPaneRef.value.moveToTarget(r);
-        if (r.fullPath !== route.fullPath) {
-          tagsViewStore.updateVisitedView(route);
-        }
-      }
+    const currentTag = visitedViews.value.find((v) => v.fullPath === route.fullPath);
+    if (currentTag) {
+      scrollPaneRef.value?.moveToTarget(currentTag);
     }
   });
 }
 
-function isActive(tag: TagView) {
-  return tag.path === route.path;
+/**
+ * Закрываем меню тегов
+ */
+function closeTagMenu() {
+  tagMenuVisible.value = false;
 }
 
-function isAffix(tag: TagView) {
-  return tag.meta && tag.meta.affix;
+/**
+ * Открываем меню тегов
+ */
+function openTagMenu(tag: TagView, event: MouseEvent) {
+  selectedTag.value = tag;
+  menuPosition.left = event.clientX + 15;
+  menuPosition.top = event.clientY;
+  tagMenuVisible.value = true;
 }
 
-function isFirstView() {
-  try {
-    return (
-      (selectedTag.value as TagView).fullPath ===
-        tagsViewStore.visitedViews[1].fullPath ||
-      (selectedTag.value as TagView).fullPath === "/index"
-    );
-  } catch (err) {
-    return false;
-  }
-}
-
-function isLastView() {
-  try {
-    return (
-      (selectedTag.value as TagView).fullPath ===
-      tagsViewStore.visitedViews[tagsViewStore.visitedViews.length - 1].fullPath
-    );
-  } catch (err) {
-    return false;
-  }
-}
-
-function toLastView(visitedViews: TagView[], view?: TagView) {
-  const latestView = visitedViews.slice(-1)[0];
-  if (latestView && latestView.fullPath) {
-    router.push(latestView.fullPath);
-  } else {
-    router.push("/");
-  }
-}
-
-function closeSelectedTag(view: TagView) {
-  tagsViewStore.delView(view).then((res: any) => {
-    if (isActive(view)) {
-      toLastView(res.visitedViews, view);
+/**
+ * Закрываем выбранный тег
+ */
+function closeSelectedTag(tag: TagView) {
+  tagsViewStore.delView(tag).then((views) => {
+    if (route.fullPath === tag.fullPath) {
+      router.push(views.visitedViews[views.visitedViews.length - 1]?.fullPath || "/");
     }
   });
 }
 
-function closeLeftTags() {
-  tagsViewStore.delLeftViews(selectedTag.value).then((res: any) => {
-    if (
-      !res.visitedViews.find((item: TagView) => item.fullPath === route.fullPath)
-    ) {
-      toLastView(res.visitedViews);
-    }
-  });
-}
-
-function closeRightTags() {
-  tagsViewStore.delRightViews(selectedTag.value).then((res: any) => {
-    if (
-      !res.visitedViews.find((item: TagView) => item.fullPath === route.fullPath)
-    ) {
-      toLastView(res.visitedViews);
-    }
-  });
-}
-
+/**
+ * Закрываем все теги, кроме выбранного
+ */
 function closeOtherTags() {
-  router.push(selectedTag.value);
   tagsViewStore.delOtherViews(selectedTag.value).then(() => {
     moveToCurrentTag();
   });
 }
 
-function closeAllTags(view: TagView) {
-  tagsViewStore.delAllViews().then((res: any) => {
-    toLastView(res.visitedViews, view);
+/**
+ * Закрываем все теги
+ */
+function closeAllTags() {
+  tagsViewStore.delAllViews().then(() => {
+    router.push("/");
   });
 }
 
-function openTagMenu(tag: TagView, e: MouseEvent) {
-  const menuMinWidth = 105;
-
-  const offsetLeft = proxy?.$el.getBoundingClientRect().left;
-  const offsetWidth = proxy?.$el.offsetWidth;
-  const maxLeft = offsetWidth - menuMinWidth;
-  const l = e.clientX - offsetLeft + 15;
-
-  if (l > maxLeft) {
-    left.value = maxLeft;
-  } else {
-    left.value = l;
-  }
-
-  top.value = e.clientY;
-  tagMenuVisible.value = true;
-  selectedTag.value = tag;
+/**
+ * Обновляем выбранный тег
+ */
+function refreshSelectedTag(tag: TagView) {
+  tagsViewStore.delCachedView(tag);
+  router.replace({ path: tag.fullPath });
 }
 
-function closeTagMenu() {
-  tagMenuVisible.value = false;
-}
+watch(route, () => {
+  addCurrentTag();
+  moveToCurrentTag();
+});
 
 onMounted(() => {
   initTags();
@@ -214,38 +141,35 @@ onMounted(() => {
 
 <template>
   <div class="tags-container">
-    <scroll-pane ref="scrollPaneRef" @scroll="closeTagMenu">
+    <scroll-pane ref="scrollPaneRef">
       <router-link
-        :class="'tags-item ' + (isActive(tag) ? 'active' : '')"
         v-for="tag in visitedViews"
-        :key="tag.path"
-        :data-path="tag.path"
-        :to="{ path: tag.path, query: tag.query }"
-        @click.middle="!isAffix(tag) ? closeSelectedTag(tag) : ''"
+        :key="tag.fullPath"
+        :to="tag.fullPath"
+        :class="{ active: tag.fullPath === route.fullPath }"
+        class="tags-item"
         @contextmenu.prevent="openTagMenu(tag, $event)"
       >
         {{ translateRouteTitleI18n(tag.meta?.title) }}
-        <span
-          v-if="!isAffix(tag)"
+        <i-ep-close
+          v-if="!tag.meta?.affix"
           class="tags-item-close"
           @click.prevent.stop="closeSelectedTag(tag)"
-        >
-          <i-ep-close class="text-[10px]" />
-        </span>
+        />
       </router-link>
     </scroll-pane>
 
-    <!-- Меню действий с тегами -->
+    <!-- Меню тегов -->
     <ul
       v-show="tagMenuVisible"
       class="tag-menu"
-      :style="{ left: left + 'px', top: top + 'px' }"
+      :style="{ left: `${menuPosition.left}px`, top: `${menuPosition.top}px` }"
     >
       <li @click="refreshSelectedTag(selectedTag)">
         <svg-icon icon-class="refresh" />
         {{ $t("tagsView.refresh") }}
       </li>
-      <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">
+      <li v-if="!selectedTag?.meta?.affix" @click="closeSelectedTag(selectedTag)">
         <svg-icon icon-class="close" />
         {{ $t("tagsView.close") }}
       </li>
@@ -253,15 +177,7 @@ onMounted(() => {
         <svg-icon icon-class="close_other" />
         {{ $t("tagsView.closeOther") }}
       </li>
-      <li v-if="!isFirstView()" @click="closeLeftTags">
-        <svg-icon icon-class="close_left" />
-        {{ $t("tagsView.closeLeft") }}
-      </li>
-      <li v-if="!isLastView()" @click="closeRightTags">
-        <svg-icon icon-class="close_right" />
-        {{ $t("tagsView.closeRight") }}
-      </li>
-      <li @click="closeAllTags(selectedTag)">
+      <li @click="closeAllTags">
         <svg-icon icon-class="close_all" />
         {{ $t("tagsView.closeAll") }}
       </li>
@@ -273,57 +189,41 @@ onMounted(() => {
 .tags-container {
   width: 100%;
   height: 34px;
-  background-color: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  box-shadow: 0 1px 1px var(--el-box-shadow-light);
+  display: flex;
+  align-items: center;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
 
   .tags-item {
-    display: inline-block;
-    padding: 3px 8px;
-    margin: 4px 0 0 5px;
+    margin: 0 5px;
+    padding: 5px 10px;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 4px;
     font-size: 12px;
     cursor: pointer;
-    border: 1px solid var(--el-border-color-light);
-
-    &:first-of-type {
-      margin-left: 15px;
-    }
-
-    &:last-of-type {
-      margin-right: 15px;
-    }
-
-    &:hover {
-      color: var(--el-color-primary);
-    }
 
     &.active {
+      background: var(--el-color-primary);
       color: #fff;
-      background-color: var(--el-color-primary);
-      border-color: var(--el-color-primary);
     }
 
-    &-close {
-      border-radius: 100%;
-      &:hover {
-        color: #fff;
-        background: rgb(0 0 0 / 16%);
-      }
+    .tags-item-close {
+      margin-left: 5px;
+      cursor: pointer;
     }
   }
 
   .tag-menu {
     position: absolute;
-    z-index: 99;
-    font-size: 12px;
+    z-index: 1000;
     background: var(--el-bg-color-overlay);
     border-radius: 4px;
-    box-shadow: var(--el-box-shadow-light);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 
     li {
       padding: 8px 16px;
       cursor: pointer;
-
       &:hover {
         background: var(--el-fill-color-light);
       }
