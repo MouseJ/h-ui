@@ -172,5 +172,11 @@ export default {
     closeRight: "Закрыть справа",
     closeAll: "Закрыть все",
   },
+  language: {
+    switchSuccess: "Язык успешно изменён!",
+    zh: "中文",
+    en: "English",
+    ru: "Русский",
+  },
 
 };
