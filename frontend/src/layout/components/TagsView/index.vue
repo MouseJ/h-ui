@@ -37,7 +37,7 @@ watch(
     moveToCurrentTag();
   },
   {
-    immediate: true, // Выполнять при инициализации
+    immediate: true,
   }
 );
 
@@ -134,20 +134,39 @@ function isLastView() {
   }
 }
 
-function refreshSelectedTag(view: TagView) {
-  tagsViewStore.delCachedView(view);
-  const { fullPath } = view;
-  nextTick(() => {
-    router.replace({ path: "/redirect" + fullPath }).catch((err) => {
-      console.warn(err);
-    });
-  });
+function toLastView(visitedViews: TagView[], view?: TagView) {
+  const latestView = visitedViews.slice(-1)[0];
+  if (latestView && latestView.fullPath) {
+    router.push(latestView.fullPath);
+  } else {
+    router.push("/");
+  }
 }
 
 function closeSelectedTag(view: TagView) {
   tagsViewStore.delView(view).then((res: any) => {
     if (isActive(view)) {
       toLastView(res.visitedViews, view);
+    }
+  });
+}
+
+function closeLeftTags() {
+  tagsViewStore.delLeftViews(selectedTag.value).then((res: any) => {
+    if (
+      !res.visitedViews.find((item: TagView) => item.fullPath === route.fullPath)
+    ) {
+      toLastView(res.visitedViews);
+    }
+  });
+}
+
+function closeRightTags() {
+  tagsViewStore.delRightViews(selectedTag.value).then((res: any) => {
+    if (
+      !res.visitedViews.find((item: TagView) => item.fullPath === route.fullPath)
+    ) {
+      toLastView(res.visitedViews);
     }
   });
 }
