@@ -1,52 +1,63 @@
-// 系统设置
+// Системные настройки
 interface DefaultSettings {
   /**
-   * 系统title
+   * Заголовок системы
    */
   title: string;
 
   /**
-   * 是否显示设置
+   * Отображение настроек
    */
   showSettings: boolean;
+
   /**
-   * 是否显示多标签导航
+   * Отображение вкладок навигации
    */
   tagsView: boolean;
+
   /**
-   *是否固定头部
+   * Фиксированная шапка
    */
   fixedHeader: boolean;
+
   /**
-   * 是否显示侧边栏Logo
+   * Отображение логотипа в боковой панели
    */
   sidebarLogo: boolean;
+
   /**
-   * 导航栏布局
+   * Макет навигации
    */
   layout: string;
+
   /**
-   * 主题颜色
+   * Цвет темы
    */
   themeColor: string;
+
   /**
-   * 主题模式
+   * Режим темы
+   * dark: тёмный
+   * light: светлый
    */
   theme: string;
 
   /**
-   * 布局大小
+   * Размер интерфейса
    */
   size: string;
 
   /**
-   * 语言
+   * Язык интерфейса
+   * ru: Русский
+   * zh-cn: Китайский
+   * en: Английский
    */
   language: string;
 }
 
 const defaultSettings: DefaultSettings = {
-  title: "h-ui",
+  title: "VPN Management Panel",
   showSettings: true,
   tagsView: true,
   fixedHeader: false,
@@ -54,14 +65,13 @@ const defaultSettings: DefaultSettings = {
   layout: "left",
   themeColor: "#409EFF",
   /**
-   *  主题模式
-   *
-   * dark:暗黑模式
-   * light: 明亮模式
+   * Режим темы
+   * dark: тёмный
+   * light: светлый
    */
   theme: "dark",
-  size: "default", // default |large |small
-  language: "zh-cn", // zh-cn| en
+  size: "default", // default | large | small
+  language: "ru", // ru | zh-cn | en
 };
 
 export default defaultSettings;
