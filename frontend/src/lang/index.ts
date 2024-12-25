@@ -2,9 +2,10 @@ import { createI18n } from "vue-i18n";
 import { useAppStore } from "@/store/modules/app";
 
 const appStore = useAppStore();
-// 本地语言包
+// Локализация
 import enLocale from "./package/en";
 import zhCnLocale from "./package/zh-cn";
+import ruLocale from "./package/ru"; 
 
 const messages = {
   "zh-cn": {
@@ -12,6 +13,9 @@ const messages = {
   },
   en: {
     ...enLocale,
+  },
+  ru: {
+    ...ruLocale,
   },
 };
 
