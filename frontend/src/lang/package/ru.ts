@@ -164,4 +164,15 @@ export default {
     http: "API статистики трафика",
     masquerade: "Маскировка",
   },
+export default {
+  tagsView: {
+    refresh: "Обновить",
+    close: "Закрыть",
+    closeOther: "Закрыть другие",
+    closeLeft: "Закрыть слева",
+    closeRight: "Закрыть справа",
+    closeAll: "Закрыть все",
+  },
+};
+
 };
