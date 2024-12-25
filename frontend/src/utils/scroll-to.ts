@@ -1,4 +1,12 @@
-const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
+/**
+ * Функция плавного ускорения и замедления движения (ease-in-out)
+ * @param {number} t Текущее время
+ * @param {number} b Начальная позиция
+ * @param {number} c Изменение позиции
+ * @param {number} d Длительность анимации
+ * @returns {number} Рассчитанная позиция
+ */
+const easeInOutQuad = (t: number, b: number, c: number, d: number): number => {
   t /= d / 2;
   if (t < 1) {
     return (c / 2) * t * t + b;
@@ -7,29 +15,33 @@ const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
   return (-c / 2) * (t * (t - 2) - 1) + b;
 };
 
-// requestAnimationFrame for Smart Animating http://goo.gl/sx5sts
+// Используем requestAnimationFrame для плавной анимации
 const requestAnimFrame = (function () {
   return (
     window.requestAnimationFrame ||
     (window as any).webkitRequestAnimationFrame ||
     (window as any).mozRequestAnimationFrame ||
-    function (callback) {
-      window.setTimeout(callback, 1000 / 60);
+    function (callback: FrameRequestCallback) {
+      window.setTimeout(callback, 1000 / 60); // Фолбэк на setTimeout для старых браузеров
     }
   );
 })();
 
 /**
- * Because it's so fucking difficult to detect the scrolling element, just move them all
- * @param {number} amount
+ * Перемещение документа на указанное количество пикселей
+ * @param {number} amount Количество пикселей для перемещения
  */
-const move = (amount: number) => {
+const move = (amount: number): void => {
   document.documentElement.scrollTop = amount;
   (document.body.parentNode as HTMLElement).scrollTop = amount;
   document.body.scrollTop = amount;
 };
 
-const position = () => {
+/**
+ * Получение текущей позиции прокрутки
+ * @returns {number} Текущая позиция прокрутки
+ */
+const position = (): number => {
   return (
     document.documentElement.scrollTop ||
     (document.body.parentNode as HTMLElement).scrollTop ||
@@ -38,32 +50,34 @@ const position = () => {
 };
 
 /**
- * @param {number} to
- * @param {number} duration
- * @param {Function} callback
+ * Анимация прокрутки страницы
+ * @param {number} to Целевая позиция
+ * @param {number} duration Длительность анимации (в миллисекундах)
+ * @param {Function} [callback] Колбэк, вызываемый после завершения анимации
  */
-export const scrollTo = (to: number, duration: number, callback?: any) => {
+export const scrollTo = (
+  to: number,
+  duration: number = 500,
+  callback?: () => void
+): void => {
   const start = position();
   const change = to - start;
-  const increment = 20;
+  const increment = 20; // Частота обновлений в миллисекундах
   let currentTime = 0;
-  duration = typeof duration === "undefined" ? 500 : duration;
+
   const animateScroll = function () {
-    // increment the time
     currentTime += increment;
-    // find the value with the quadratic in-out easing function
     const val = easeInOutQuad(currentTime, start, change, duration);
-    // move the document.body
     move(val);
-    // do the animation unless its over
+
     if (currentTime < duration) {
       requestAnimFrame(animateScroll);
     } else {
       if (callback && typeof callback === "function") {
-        // the animation is done so lets callback
-        callback();
+        callback(); // Вызов колбэка после завершения анимации
       }
     }
   };
+
   animateScroll();
 };
