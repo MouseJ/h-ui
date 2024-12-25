@@ -37,11 +37,11 @@ watch(
     moveToCurrentTag();
   },
   {
-    immediate: true, // Выполнять сразу после инициализации
+    immediate: true, // Выполнять при инициализации
   }
 );
 
-const tagMenuVisible = ref(false); // Видимость меню тегов
+const tagMenuVisible = ref(false); // Состояние видимости меню действий с тегами
 watch(tagMenuVisible, (value) => {
   if (value) {
     document.body.addEventListener("click", closeTagMenu);
@@ -50,9 +50,6 @@ watch(tagMenuVisible, (value) => {
   }
 });
 
-/**
- * Фильтруем закреплённые теги
- */
 function filterAffixTags(routes: any[], basePath = "/") {
   let tags: TagView[] = [];
 
@@ -77,9 +74,6 @@ function filterAffixTags(routes: any[], basePath = "/") {
   return tags;
 }
 
-/**
- * Инициализация закреплённых тегов
- */
 function initTags() {
   const tags: TagView[] = filterAffixTags(permissionStore.routes);
   affixTags.value = tags;
@@ -90,18 +84,12 @@ function initTags() {
   }
 }
 
-/**
- * Добавляем текущий тег
- */
 function addTags() {
   if (route.name) {
     tagsViewStore.addView(route);
   }
 }
 
-/**
- * Прокрутка к текущему тегу
- */
 function moveToCurrentTag() {
   nextTick(() => {
     for (const r of tagsViewStore.visitedViews) {
@@ -123,40 +111,74 @@ function isAffix(tag: TagView) {
   return tag.meta && tag.meta.affix;
 }
 
-function closeSelectedTag(tag: TagView) {
-  tagsViewStore.delView(tag).then((res: any) => {
-    if (isActive(tag)) {
-      const latestView = res.visitedViews.slice(-1)[0];
-      router.push(latestView?.fullPath || "/");
+function isFirstView() {
+  try {
+    return (
+      (selectedTag.value as TagView).fullPath ===
+        tagsViewStore.visitedViews[1].fullPath ||
+      (selectedTag.value as TagView).fullPath === "/index"
+    );
+  } catch (err) {
+    return false;
+  }
+}
+
+function isLastView() {
+  try {
+    return (
+      (selectedTag.value as TagView).fullPath ===
+      tagsViewStore.visitedViews[tagsViewStore.visitedViews.length - 1].fullPath
+    );
+  } catch (err) {
+    return false;
+  }
+}
+
+function refreshSelectedTag(view: TagView) {
+  tagsViewStore.delCachedView(view);
+  const { fullPath } = view;
+  nextTick(() => {
+    router.replace({ path: "/redirect" + fullPath }).catch((err) => {
+      console.warn(err);
+    });
+  });
+}
+
+function closeSelectedTag(view: TagView) {
+  tagsViewStore.delView(view).then((res: any) => {
+    if (isActive(view)) {
+      toLastView(res.visitedViews, view);
     }
   });
 }
 
 function closeOtherTags() {
+  router.push(selectedTag.value);
   tagsViewStore.delOtherViews(selectedTag.value).then(() => {
     moveToCurrentTag();
   });
 }
 
-function closeAllTags() {
-  tagsViewStore.delAllViews().then(() => {
-    router.push("/");
+function closeAllTags(view: TagView) {
+  tagsViewStore.delAllViews().then((res: any) => {
+    toLastView(res.visitedViews, view);
   });
-}
-
-function refreshSelectedTag(tag: TagView) {
-  tagsViewStore.delCachedView(tag);
-  router.replace({ path: tag.fullPath });
 }
 
 function openTagMenu(tag: TagView, e: MouseEvent) {
   const menuMinWidth = 105;
-  const offsetLeft = proxy?.$el.getBoundingClientRect().left || 0;
-  const offsetWidth = proxy?.$el.offsetWidth || 0;
+
+  const offsetLeft = proxy?.$el.getBoundingClientRect().left;
+  const offsetWidth = proxy?.$el.offsetWidth;
   const maxLeft = offsetWidth - menuMinWidth;
   const l = e.clientX - offsetLeft + 15;
 
-  left.value = l > maxLeft ? maxLeft : l;
+  if (l > maxLeft) {
+    left.value = maxLeft;
+  } else {
+    left.value = l;
+  }
+
   top.value = e.clientY;
   tagMenuVisible.value = true;
   selectedTag.value = tag;
@@ -173,42 +195,55 @@ onMounted(() => {
 
 <template>
   <div class="tags-container">
-    <scroll-pane ref="scrollPaneRef">
+    <scroll-pane ref="scrollPaneRef" @scroll="closeTagMenu">
       <router-link
+        :class="'tags-item ' + (isActive(tag) ? 'active' : '')"
         v-for="tag in visitedViews"
-        :key="tag.fullPath"
-        :to="{ path: tag.fullPath }"
-        class="tags-item"
-        :class="{ active: isActive(tag) }"
+        :key="tag.path"
+        :data-path="tag.path"
+        :to="{ path: tag.path, query: tag.query }"
+        @click.middle="!isAffix(tag) ? closeSelectedTag(tag) : ''"
         @contextmenu.prevent="openTagMenu(tag, $event)"
       >
         {{ translateRouteTitleI18n(tag.meta?.title) }}
         <span
           v-if="!isAffix(tag)"
           class="tags-item-close"
-          @click.stop="closeSelectedTag(tag)"
+          @click.prevent.stop="closeSelectedTag(tag)"
         >
-          ×
+          <i-ep-close class="text-[10px]" />
         </span>
       </router-link>
     </scroll-pane>
 
-    <!-- Меню тегов -->
+    <!-- Меню действий с тегами -->
     <ul
       v-show="tagMenuVisible"
       class="tag-menu"
-      :style="{ left: `${left}px`, top: `${top}px` }"
+      :style="{ left: left + 'px', top: top + 'px' }"
     >
       <li @click="refreshSelectedTag(selectedTag)">
+        <svg-icon icon-class="refresh" />
         {{ $t("tagsView.refresh") }}
       </li>
-      <li v-if="!selectedTag?.meta?.affix" @click="closeSelectedTag(selectedTag)">
+      <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)">
+        <svg-icon icon-class="close" />
         {{ $t("tagsView.close") }}
       </li>
       <li @click="closeOtherTags">
+        <svg-icon icon-class="close_other" />
         {{ $t("tagsView.closeOther") }}
       </li>
-      <li @click="closeAllTags">
+      <li v-if="!isFirstView()" @click="closeLeftTags">
+        <svg-icon icon-class="close_left" />
+        {{ $t("tagsView.closeLeft") }}
+      </li>
+      <li v-if="!isLastView()" @click="closeRightTags">
+        <svg-icon icon-class="close_right" />
+        {{ $t("tagsView.closeRight") }}
+      </li>
+      <li @click="closeAllTags(selectedTag)">
+        <svg-icon icon-class="close_all" />
         {{ $t("tagsView.closeAll") }}
       </li>
     </ul>
@@ -217,28 +252,63 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .tags-container {
-  display: flex;
+  width: 100%;
   height: 34px;
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-light);
-}
+  background-color: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  box-shadow: 0 1px 1px var(--el-box-shadow-light);
 
-.tags-item {
-  margin: 0 5px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  background: var(--el-bg-color-overlay);
-  cursor: pointer;
-}
+  .tags-item {
+    display: inline-block;
+    padding: 3px 8px;
+    margin: 4px 0 0 5px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--el-border-color-light);
 
-.tags-item.active {
-  background: var(--el-color-primary);
-  color: #fff;
-}
+    &:first-of-type {
+      margin-left: 15px;
+    }
 
-.tag-menu {
-  position: absolute;
-  background: var(--el-bg-color-overlay);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    &:last-of-type {
+      margin-right: 15px;
+    }
+
+    &:hover {
+      color: var(--el-color-primary);
+    }
+
+    &.active {
+      color: #fff;
+      background-color: var(--el-color-primary);
+      border-color: var(--el-color-primary);
+    }
+
+    &-close {
+      border-radius: 100%;
+      &:hover {
+        color: #fff;
+        background: rgb(0 0 0 / 16%);
+      }
+    }
+  }
+
+  .tag-menu {
+    position: absolute;
+    z-index: 99;
+    font-size: 12px;
+    background: var(--el-bg-color-overlay);
+    border-radius: 4px;
+    box-shadow: var(--el-box-shadow-light);
+
+    li {
+      padding: 8px 16px;
+      cursor: pointer;
+
+      &:hover {
+        background: var(--el-fill-color-light);
+      }
+    }
+  }
 }
 </style>
