@@ -4,16 +4,14 @@ import SvgIcon from "@/components/SvgIcon/index.vue";
 import { useAppStore } from "@/store/modules/app";
 
 const appStore = useAppStore();
-const { locale } = useI18n();
+const { locale, t } = useI18n(); // Подключаем локализацию
 
 function handleLanguageChange(lang: string) {
   locale.value = lang;
   appStore.changeLanguage(lang);
-  if (lang == "en") {
-    ElMessage.success("Switch Language Successful!");
-  } else {
-    ElMessage.success("切换语言成功！");
-  }
+
+  // Локализованное сообщение об успешной смене языка
+  ElMessage.success(t("language.switchSuccess"));
 }
 </script>
 
@@ -28,10 +26,19 @@ function handleLanguageChange(lang: string) {
           :disabled="appStore.language === 'zh-cn'"
           command="zh-cn"
         >
-          中文
+          {{ $t("language.zh") }}
         </el-dropdown-item>
-        <el-dropdown-item :disabled="appStore.language === 'en'" command="en">
-          English
+        <el-dropdown-item
+          :disabled="appStore.language === 'en'"
+          command="en"
+        >
+          {{ $t("language.en") }}
+        </el-dropdown-item>
+        <el-dropdown-item
+          :disabled="appStore.language === 'ru'"
+          command="ru"
+        >
+          {{ $t("language.ru") }}
         </el-dropdown-item>
       </el-dropdown-menu>
     </template>
