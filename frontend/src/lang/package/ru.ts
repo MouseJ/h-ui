@@ -199,5 +199,14 @@ export default {
     seconds: "сек.",
     now: "-", // Текст, если время истекло
   },
+  settings: {
+    projectConfig: "Настройки проекта",
+    theme: "Тема",
+    interfaceSettings: "Настройки интерфейса",
+    enableTagsView: "Включить Tags-View",
+    fixedHeader: "Закрепить заголовок",
+    sidebarLogo: "Логотип в боковой панели",
+    themeColors: "Цвета темы",
+  },
 
 };
