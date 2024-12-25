@@ -164,7 +164,6 @@ export default {
     http: "API статистики трафика",
     masquerade: "Маскировка",
   },
-export default {
   tagsView: {
     refresh: "Обновить",
     close: "Закрыть",
@@ -173,6 +172,5 @@ export default {
     closeRight: "Закрыть справа",
     closeAll: "Закрыть все",
   },
-};
 
 };
